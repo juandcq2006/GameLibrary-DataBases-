@@ -1,14 +1,12 @@
 // GET /api/me/games and PATCH /api/me/games/:gameId — one endpoint per function in api.ts.
 import { Router } from 'express';
+import { currentUserId } from '../auth.ts';
 import { pool } from '../db.ts';
 import { HttpError } from '../http-error.ts';
 import { toSqlDateTime, toUserGame, type UserGameRow } from '../map.ts';
 import { TRACKING_STATUSES, type Library, type UserGame } from '../types.ts';
 
 export const meGamesRouter: Router = Router();
-
-/** Authentication is a later ADR; every request is the demo user for now. */
-const DEMO_USER_ID = 1;
 
 const COLUMN = {
   status: 'status',
@@ -84,7 +82,7 @@ function sqlValue(key: WritableKey, value: unknown): SqlValue {
       return badRequest('lastPlayedAt must be an ISO 8601 date-time or null');
 
     default:
-      return badRequest(`campo no editable: ${String(key)}`);
+      return badRequest(`field is not editable: ${String(key)}`);
   }
 }
 
@@ -95,7 +93,7 @@ function badRequest(message: string): never {
 /** Only the fields present in the body change; `gameId` and `updatedAt` are ignored. */
 function readChanges(body: unknown): { column: string; value: SqlValue }[] {
   if (body === null || typeof body !== 'object' || Array.isArray(body)) {
-    throw new HttpError(400, 'el cuerpo debe ser un objeto JSON');
+    throw new HttpError(400, 'Request body must be a JSON object');
   }
 
   const record = body as Record<string, unknown>;
@@ -110,20 +108,22 @@ function readChanges(body: unknown): { column: string; value: SqlValue }[] {
   return changes;
 }
 
-async function selectRow(gameId: string): Promise<UserGame | null> {
-  const [rows] = await pool.query(SELECT_ROW, [DEMO_USER_ID, gameId]);
+async function selectRow(userId: number, gameId: string): Promise<UserGame | null> {
+  const [rows] = await pool.query(SELECT_ROW, [userId, gameId]);
   const row = (rows as UserGameRow[])[0];
   return row === undefined ? null : toUserGame(row);
 }
 
-meGamesRouter.get('/', async (_req, res) => {
+meGamesRouter.get('/', async (req, res) => {
+  const userId = currentUserId(req);
+
   const [rows] = await pool.query(
     `SELECT game_id, status, score, hours_played, is_favorite, is_installed,
             achievements_unlocked, notes, last_played_at, updated_at
        FROM user_games
       WHERE user_id = ?
       ORDER BY game_id`,
-    [DEMO_USER_ID]
+    [userId]
   );
 
   const library: Library = {};
@@ -133,14 +133,15 @@ meGamesRouter.get('/', async (_req, res) => {
 
 meGamesRouter.patch('/:gameId', async (req, res) => {
   const gameId = req.params.gameId;
+  const userId = currentUserId(req);
 
   const [games] = await pool.query('SELECT id FROM games WHERE id = ?', [gameId]);
-  if ((games as unknown[]).length === 0) throw new HttpError(404, `juego no encontrado: ${gameId}`);
+  if ((games as unknown[]).length === 0) throw new HttpError(404, `Game not found: ${gameId}`);
 
   const changes = readChanges(req.body);
 
   if (changes.length === 0) {
-    res.json((await selectRow(gameId)) ?? defaults(gameId));
+    res.json((await selectRow(userId, gameId)) ?? defaults(gameId));
     return;
   }
 
@@ -153,10 +154,10 @@ meGamesRouter.patch('/:gameId', async (req, res) => {
     `INSERT INTO user_games (user_id, game_id, ${columns.join(', ')})
      VALUES (?, ?, ${columns.map(() => '?').join(', ')}) AS new
      ON DUPLICATE KEY UPDATE ${updates}, updated_at = CURRENT_TIMESTAMP`,
-    [DEMO_USER_ID, gameId, ...values]
+    [userId, gameId, ...values]
   );
 
-  const saved = await selectRow(gameId);
-  if (saved === null) throw new HttpError(500, 'la fila desapareció después de escribirla');
+  const saved = await selectRow(userId, gameId);
+  if (saved === null) throw new HttpError(500, 'Row disappeared after writing it');
   res.json(saved);
 });

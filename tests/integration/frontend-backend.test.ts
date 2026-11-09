@@ -6,7 +6,14 @@ import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import { createApp } from '../../backend/index.ts';
 import { pool } from '../../backend/db.ts';
-import { getGames, getLibrary, saveUserGame } from '../../frontend/src/shared/api/api.ts';
+import {
+  deleteMyReview,
+  getGameReviews,
+  getGames,
+  getLibrary,
+  saveMyReview,
+  saveUserGame,
+} from '../../frontend/src/shared/api/api.ts';
 
 let server: Server | undefined;
 let base = '';
@@ -73,5 +80,24 @@ test('API validation errors reach the caller as rejected promises', { skip }, as
 });
 
 test('an unknown game rejects with the API 404 message', { skip }, async () => {
-  await assert.rejects(saveUserGame('no-existe', { status: 'CURRENT' }), /juego no encontrado/);
+  await assert.rejects(saveUserGame('no-existe', { status: 'CURRENT' }), /Game not found/);
+});
+
+test('the frontend layer reads and writes reviews through the real API', { skip }, async () => {
+  const gameId = 'dead-cells';
+
+  const before = await getGameReviews(gameId);
+  assert.ok(Array.isArray(before));
+
+  const saved = await saveMyReview(gameId, 'End-to-end review.');
+  assert.equal(saved.gameId, gameId);
+  assert.equal(saved.body, 'End-to-end review.');
+
+  const during = await getGameReviews(gameId);
+  assert.ok(during.some((review) => review.gameId === gameId && review.body === 'End-to-end review.'));
+
+  await deleteMyReview(gameId);
+
+  const after = await getGameReviews(gameId);
+  assert.ok(!after.some((review) => review.body === 'End-to-end review.'));
 });

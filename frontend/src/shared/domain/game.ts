@@ -45,6 +45,40 @@ export interface UserGame {
 /** The current user's `user_games` rows, keyed by game id. */
 export type Library = Record<string, UserGame>;
 
+/**
+ * A written review of a game. The rating is not stored with the review: it is the
+ * reviewer's `user_games.score`, so the two can never disagree.
+ */
+export interface Review {
+  gameId: string;
+  userId: number;
+  username: string;
+  score: number | null; // 0-100, from user_games
+  body: string;
+  createdAt: string; // ISO 8601 UTC
+  updatedAt: string; // ISO 8601 UTC
+}
+
+/** The signed-in account, as returned by the auth endpoints. */
+export interface AuthUser {
+  id: number;
+  username: string;
+  email: string;
+}
+
+/** Body of the sign-up form. */
+export interface SignUpInput {
+  username: string;
+  email: string;
+  password: string;
+}
+
+/** Body of the log-in form. */
+export interface LoginInput {
+  email: string;
+  password: string;
+}
+
 /** Fields the library can be sorted by (see SORTS in lib/filters.ts). */
 export type SortField = 'title' | 'averageScore' | 'hoursPlayed' | 'releaseYear' | 'popularity';
 export type SortDirection = 'asc' | 'desc';

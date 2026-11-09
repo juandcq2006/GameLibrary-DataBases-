@@ -1,5 +1,5 @@
 // Row → wire mapping: snake_case → camelCase, 0/1 → boolean, DECIMAL → number, DATETIME → ISO UTC.
-import type { Game, GameFormat, UserGame, UserTrackingStatus } from './types.ts';
+import type { Game, GameFormat, Review, UserGame, UserTrackingStatus } from './types.ts';
 
 /** MySQL DATETIME (stored as UTC, no zone) → ISO 8601. */
 export function toIso(value: string | null): string | null {
@@ -42,6 +42,16 @@ export interface UserGameRow {
   updated_at: string;
 }
 
+export interface ReviewRow {
+  game_id: string;
+  user_id: number;
+  username: string;
+  score: number | null;
+  body: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export function toGame(row: GameRow): Game {
   return {
     id: row.id,
@@ -73,5 +83,17 @@ export function toUserGame(row: UserGameRow): UserGame {
     notes: row.notes,
     lastPlayedAt: toIso(row.last_played_at),
     updatedAt: toIso(row.updated_at) ?? new Date().toISOString(),
+  };
+}
+
+export function toReview(row: ReviewRow): Review {
+  return {
+    gameId: row.game_id,
+    userId: Number(row.user_id),
+    username: row.username,
+    score: row.score === null ? null : Number(row.score),
+    body: row.body,
+    createdAt: toIso(row.created_at) ?? '',
+    updatedAt: toIso(row.updated_at) ?? '',
   };
 }

@@ -3,14 +3,19 @@ import express, { type ErrorRequestHandler, type RequestHandler } from 'express'
 import { pathToFileURL } from 'node:url';
 import { pool } from './db.ts';
 import { HttpError } from './http-error.ts';
+import { authRouter } from './routes/auth.ts';
 import { gamesRouter } from './routes/games.ts';
 import { meGamesRouter } from './routes/me-games.ts';
+import { reviewsRouter } from './routes/reviews.ts';
 
 /** mysql2 client errors caused by bad input (CHECK, ENUM, truncation) answer 400, not 500. */
 const CLIENT_ERRORS = new Set([1265, 1292, 1366, 1406, 3819]);
 
+/** Duplicate key and broken foreign key are conflicts with existing data, not server failures. */
+const CONFLICT_ERRORS = new Set([1062, 1452]);
+
 const notFound: RequestHandler = (_req, res) => {
-  res.status(404).json({ error: 'Ruta no encontrada' });
+  res.status(404).json({ error: 'Route not found' });
 };
 
 const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
@@ -21,7 +26,7 @@ const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
 
   const { errno, type } = err as { errno?: number; type?: string };
   if (type === 'entity.parse.failed') {
-    res.status(400).json({ error: 'JSON inválido' });
+    res.status(400).json({ error: 'Invalid JSON' });
     return;
   }
 
@@ -30,8 +35,13 @@ const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     return;
   }
 
+  if (errno !== undefined && CONFLICT_ERRORS.has(errno)) {
+    res.status(409).json({ error: (err as Error).message });
+    return;
+  }
+
   console.error(err);
-  res.status(500).json({ error: 'Error interno del servidor' });
+  res.status(500).json({ error: 'Internal server error' });
 };
 
 export function createApp(): express.Express {
@@ -39,7 +49,9 @@ export function createApp(): express.Express {
   app.disable('x-powered-by');
   app.use(express.json({ limit: '100kb' }));
 
+  app.use('/api/auth', authRouter);
   app.use('/api/me/games', meGamesRouter);
+  app.use('/api', reviewsRouter);
   app.use('/api', gamesRouter);
 
   app.use(notFound);
@@ -51,13 +63,13 @@ const entry = process.argv[1];
 if (entry !== undefined && import.meta.url === pathToFileURL(entry).href) {
   const port = Number(process.env.PORT ?? 3000);
   const server = createApp().listen(port, () => {
-    console.log(`Geekbond API escuchando en http://localhost:${port}`);
+    console.log(`Geekbond API listening on http://localhost:${port}`);
   });
 
   // Close the HTTP server and drain the MySQL pool before exiting, so a restart
   // never leaves connections or in-flight writes half-done.
   const shutdown = (signal: NodeJS.Signals): void => {
-    console.log(`\n${signal} recibido; cerrando el servidor…`);
+    console.log(`\n${signal} received; shutting down...`);
     server.close(() => {
       void pool.end().finally(() => process.exit(0));
     });

@@ -48,3 +48,37 @@ export type Library = Record<string, UserGame>;
 
 /** Fields a client may send on PATCH; `gameId` and `updatedAt` are server-owned. */
 export type WritableUserGame = Omit<UserGame, 'gameId' | 'updatedAt'>;
+
+/**
+ * A written review. The rating is not stored here: it is the reviewer's
+ * `user_games.score`, joined in so the two can never disagree.
+ */
+export interface Review {
+  gameId: string;
+  userId: number;
+  username: string;
+  score: number | null;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** The account fields safe to send to a client (never the password hash). */
+export interface AuthUser {
+  id: number;
+  username: string;
+  email: string;
+}
+
+/** Body of POST /api/auth/signup. */
+export interface SignUpInput {
+  username: string;
+  email: string;
+  password: string;
+}
+
+/** Body of POST /api/auth/login. */
+export interface LoginInput {
+  email: string;
+  password: string;
+}

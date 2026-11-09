@@ -2,8 +2,8 @@
 // accidental changes to the contract shared with the frontend.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { toGame, toIso, toSqlDateTime, toUserGame } from '../../backend/map.ts';
-import type { GameRow, UserGameRow } from '../../backend/map.ts';
+import { toGame, toIso, toReview, toSqlDateTime, toUserGame } from '../../backend/map.ts';
+import type { GameRow, ReviewRow, UserGameRow } from '../../backend/map.ts';
 
 const gameRow = (overrides: Partial<GameRow> = {}): GameRow => ({
   id: 'g1',
@@ -90,4 +90,31 @@ test('toUserGame converts a stored last_played_at to ISO UTC', () => {
     toUserGame(userRow({ last_played_at: '2024-01-02 03:04:05' })).lastPlayedAt,
     '2024-01-02T03:04:05.000Z'
   );
+});
+
+const reviewRow = (overrides: Partial<ReviewRow> = {}): ReviewRow => ({
+  game_id: 'g1',
+  user_id: 2,
+  username: 'pixelpam',
+  score: 95,
+  body: 'Great game.',
+  created_at: '2024-03-09 21:15:30',
+  updated_at: '2024-03-10 08:00:00',
+  ...overrides,
+});
+
+test('toReview joins the reviewer name and keeps the library score', () => {
+  assert.deepEqual(toReview(reviewRow()), {
+    gameId: 'g1',
+    userId: 2,
+    username: 'pixelpam',
+    score: 95,
+    body: 'Great game.',
+    createdAt: '2024-03-09T21:15:30.000Z',
+    updatedAt: '2024-03-10T08:00:00.000Z',
+  });
+});
+
+test('toReview keeps an unscored review as null', () => {
+  assert.equal(toReview(reviewRow({ score: null })).score, null);
 });

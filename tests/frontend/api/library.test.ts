@@ -2,7 +2,19 @@
 // The server-side behavior itself is covered by tests/backend/api.test.ts.
 import { afterEach, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { getGames, getLibrary, newUserGame, saveUserGame } from '../../../frontend/src/shared/api/api.ts';
+import {
+  deleteMyReview,
+  getCurrentUser,
+  getGameReviews,
+  getGames,
+  getLibrary,
+  logIn,
+  logOut,
+  newUserGame,
+  saveMyReview,
+  saveUserGame,
+  signUp,
+} from '../../../frontend/src/shared/api/api.ts';
 import type { UserGame } from '../../../frontend/src/shared/domain/game.ts';
 
 const realFetch = globalThis.fetch;
@@ -92,7 +104,108 @@ test('a non-2xx response rejects with the API error message', async () => {
 test('a non-JSON error falls back to the HTTP status', async () => {
   globalThis.fetch = (async () => new Response('oops', { status: 500 })) as typeof fetch;
 
-  await assert.rejects(getGames(), /Error HTTP 500/);
+  await assert.rejects(getGames(), /HTTP error 500/);
+});
+
+test('getGames forwards pagination, filter and sort parameters', async () => {
+  const calls = stubFetch([]);
+
+  await getGames({ page: 2, limit: 5, search: 'elden ring', format: 'PC', sort: 'releaseYear', order: 'asc' });
+
+  assert.equal(
+    calls[0].url,
+    '/api/games?page=2&limit=5&search=elden+ring&format=PC&sort=releaseYear&order=asc'
+  );
+});
+
+test('getGameReviews calls GET /api/games/:id/reviews and encodes the id', async () => {
+  const reviews = [{ gameId: 'g1', body: 'Great game.' }];
+  const calls = stubFetch(reviews);
+
+  assert.deepEqual(await getGameReviews('a/b c'), reviews);
+  assert.equal(calls[0].url, '/api/games/a%2Fb%20c/reviews');
+});
+
+test('saveMyReview PUTs only the body to /api/me/reviews/:id', async () => {
+  const saved = { gameId: 'g1', body: 'Updated.' };
+  const calls = stubFetch(saved);
+
+  assert.deepEqual(await saveMyReview('g1', 'Updated.'), saved);
+  assert.equal(calls[0].url, '/api/me/reviews/g1');
+
+  const init = calls[0].init;
+  assert.ok(init);
+  assert.equal(init.method, 'PUT');
+  assert.equal((init.headers as Record<string, string>)['content-type'], 'application/json');
+  assert.deepEqual(JSON.parse(String(init.body)), { body: 'Updated.' });
+});
+
+test('deleteMyReview accepts a 204 No Content response', async () => {
+  const calls: RecordedCall[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    calls.push({ url: String(input), init });
+    return new Response(null, { status: 204 });
+  }) as typeof fetch;
+
+  assert.equal(await deleteMyReview('g1'), undefined);
+  assert.equal(calls[0].url, '/api/me/reviews/g1');
+  assert.equal(calls[0].init?.method, 'DELETE');
+});
+
+test('signUp POSTs the form and returns the new account', async () => {
+  const user = { id: 7, username: 'pixelpam', email: 'pam@example.com' };
+  const calls = stubFetch(user, 201);
+  const input = {
+    username: 'pixelpam',
+    email: 'pam@example.com',
+    password: ['test', 'pass', 'phrase'].join('-'),
+  };
+
+  assert.deepEqual(await signUp(input), user);
+  assert.equal(calls[0].url, '/api/auth/signup');
+  assert.equal(calls[0].init?.method, 'POST');
+  assert.deepEqual(JSON.parse(String(calls[0].init?.body)), input);
+});
+
+test('logIn POSTs the credentials and returns the account', async () => {
+  const user = { id: 7, username: 'pixelpam', email: 'pam@example.com' };
+  const calls = stubFetch(user);
+  const input = { email: 'pam@example.com', password: ['test', 'pass', 'phrase'].join('-') };
+
+  assert.deepEqual(await logIn(input), user);
+  assert.equal(calls[0].url, '/api/auth/login');
+  assert.equal(calls[0].init?.method, 'POST');
+  assert.deepEqual(JSON.parse(String(calls[0].init?.body)), input);
+});
+
+test('logOut accepts a 204 No Content response', async () => {
+  const calls: RecordedCall[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    calls.push({ url: String(input), init });
+    return new Response(null, { status: 204 });
+  }) as typeof fetch;
+
+  assert.equal(await logOut(), undefined);
+  assert.equal(calls[0].url, '/api/auth/logout');
+  assert.equal(calls[0].init?.method, 'POST');
+});
+
+test('getCurrentUser returns null when the API answers 401', async () => {
+  globalThis.fetch = (async () =>
+    new Response(JSON.stringify({ error: 'Authentication required' }), {
+      status: 401,
+      headers: { 'content-type': 'application/json' },
+    })) as typeof fetch;
+
+  assert.equal(await getCurrentUser(), null);
+});
+
+test('getCurrentUser returns the account when signed in', async () => {
+  const user = { id: 7, username: 'pixelpam', email: 'pam@example.com' };
+  const calls = stubFetch(user);
+
+  assert.deepEqual(await getCurrentUser(), user);
+  assert.equal(calls[0].url, '/api/auth/me');
 });
 
 test('new rows use the user_games column defaults', () => {

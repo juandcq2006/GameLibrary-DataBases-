@@ -9,6 +9,7 @@ import {
 import type { LoginInput, SignUpInput } from '../../shared/domain/game';
 import { Button } from '../../shared/ui/Button';
 import { GeekbondLogo } from '../../shared/ui/GeekbondLogo';
+import { ModalDialog } from '../../shared/ui/ModalDialog';
 
 export type AuthMode = 'login' | 'signup';
 
@@ -36,7 +37,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onSignUp,
   isDemoMode = false,
 }) => {
-  const ref = useRef<HTMLDialogElement>(null);
+  const usernameInputRef = useRef<HTMLInputElement>(null);
+  const emailInputRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -47,10 +49,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const dialog = ref.current;
-    dialog?.showModal();
-    return () => dialog?.close();
-  }, []);
+    const target = mode === 'signup' ? usernameInputRef.current : emailInputRef.current;
+    target?.focus();
+  }, [mode]);
 
   const close = () => !isSubmitting && onClose();
 
@@ -113,13 +114,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const newPwdAutoComplete = ['new', 'password'].join('-');
 
   return (
-    <dialog
-      ref={ref}
-      aria-labelledby="auth-dialog-title"
-      onCancel={(e) => isSubmitting && e.preventDefault()}
+    <ModalDialog
+      labelledBy="auth-dialog-title"
       onClose={onClose}
-      onClick={(e) => e.target === e.currentTarget && close()}
-      className="w-[calc(100%-2rem)] max-w-md p-0 bg-surface text-ink border border-line rounded-2xl shadow-2xl backdrop:bg-black/80 backdrop:backdrop-blur-sm"
+      preventClose={isSubmitting}
+      className="w-[calc(100%-2rem)] max-w-md"
     >
       <div className="p-6 space-y-5">
         <div className="flex items-start justify-between gap-4">
@@ -182,9 +181,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 Username
               </label>
               <input
+                ref={usernameInputRef}
                 id="auth-username"
                 type="text"
                 autoComplete="username"
+                autoFocus={mode === 'signup'}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="gamer_handle"
@@ -201,9 +202,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               Email
             </label>
             <input
+              ref={emailInputRef}
               id="auth-email"
               type="email"
               autoComplete="email"
+              autoFocus={mode === 'login'}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="name@example.com"
@@ -313,6 +316,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           )}
         </p>
       </div>
-    </dialog>
+    </ModalDialog>
   );
 };

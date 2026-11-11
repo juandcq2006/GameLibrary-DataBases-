@@ -123,7 +123,7 @@ export const App: React.FC = () => {
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [activeTrackingFilter, setActiveTrackingFilter] = useState<UserTrackingStatus | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(12);
+  const PAGE_SIZE = 12;
 
   const loadLibrarySafe = useCallback(async () => {
     try {
@@ -148,6 +148,7 @@ export const App: React.FC = () => {
         if (!active) return;
         setGames(loadedGames);
         setCurrentUser(user);
+        setUsingMocks(isUsingMockData());
         await loadLibrarySafe();
         if (!active) return;
         setUsingMocks(isUsingMockData());
@@ -274,6 +275,7 @@ export const App: React.FC = () => {
   const handleLogIn = async (input: LoginInput) => {
     const user = await logIn(input);
     setCurrentUser(user);
+    setUsingMocks(isUsingMockData());
     await loadLibrarySafe();
     setNotice(null);
     if (selectedGame) await refreshReviews(selectedGame.id);
@@ -282,6 +284,7 @@ export const App: React.FC = () => {
   const handleSignUp = async (input: SignUpInput) => {
     const user = await signUp(input);
     setCurrentUser(user);
+    setUsingMocks(isUsingMockData());
     await loadLibrarySafe();
     setNotice(null);
     if (selectedGame) await refreshReviews(selectedGame.id);
@@ -291,6 +294,7 @@ export const App: React.FC = () => {
     try {
       await logOut();
       setCurrentUser(null);
+      setUsingMocks(isUsingMockData());
       await loadLibrarySafe();
       if (selectedGame) await refreshReviews(selectedGame.id);
     } catch {
@@ -324,8 +328,8 @@ export const App: React.FC = () => {
   );
 
   const paged = useMemo(
-    () => paginate(filteredAndSortedGames, currentPage, pageSize),
-    [filteredAndSortedGames, currentPage, pageSize]
+    () => paginate(filteredAndSortedGames, currentPage, PAGE_SIZE),
+    [filteredAndSortedGames, currentPage]
   );
 
   const availableGenres = useMemo(() => genreOptions(games), [games]);
@@ -336,12 +340,6 @@ export const App: React.FC = () => {
 
   const handlePageChange = (nextPage: number) => {
     setCurrentPage(nextPage);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handlePageSizeChange = (nextSize: number) => {
-    setPageSize(nextSize);
-    setCurrentPage(1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -392,7 +390,7 @@ export const App: React.FC = () => {
               className="mb-4 flex items-center justify-between gap-4 rounded-xl border border-rose-400/40 bg-surface px-4 py-3 text-sm text-ink"
             >
               {notice}
-              <button onClick={() => setNotice(null)} className="text-muted hover:text-ink">
+              <button type="button" onClick={() => setNotice(null)} className="text-muted hover:text-ink">
                 Dismiss
               </button>
             </div>
@@ -405,12 +403,14 @@ export const App: React.FC = () => {
               </span>
               <div className="flex items-center gap-2">
                 <button
+                  type="button"
                   onClick={() => setAuthMode('login')}
                   className="px-3 py-1 rounded-lg bg-elevated text-ink text-xs font-semibold hover:text-accent"
                 >
                   Log in
                 </button>
                 <button
+                  type="button"
                   onClick={() => setAuthMode('signup')}
                   className="px-3 py-1 rounded-lg bg-accent text-canvas text-xs font-semibold hover:bg-accent-hover"
                 >
@@ -604,9 +604,8 @@ export const App: React.FC = () => {
                   <Pagination
                     currentPage={paged.page}
                     totalItems={filteredAndSortedGames.length}
-                    pageSize={pageSize}
+                    pageSize={PAGE_SIZE}
                     onPageChange={handlePageChange}
-                    onPageSizeChange={handlePageSizeChange}
                   />
                 </>
               )}
@@ -616,6 +615,7 @@ export const App: React.FC = () => {
           {/* User Tracking Drawer Modal */}
           {trackingTarget && (
             <TrackingModal
+              key={trackingTarget.id}
               game={trackingTarget}
               onClose={() => setTrackingTarget(null)}
               userGame={library[trackingTarget.id]}
@@ -626,6 +626,7 @@ export const App: React.FC = () => {
           {/* Sign-up & Log-in Modal */}
           {authMode && (
             <AuthModal
+              key={authMode}
               initialMode={authMode}
               onClose={() => setAuthMode(null)}
               onLogIn={handleLogIn}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   CaretDownIcon,
   GameControllerIcon,
@@ -38,15 +38,25 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenActivity,
 }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
 
-  // Escape closes the account menu
+  // Escape or outside click closes the account menu
   useEffect(() => {
     if (!showProfileMenu) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setShowProfileMenu(false);
     };
+    const onPointerDown = (e: PointerEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('pointerdown', onPointerDown);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('pointerdown', onPointerDown);
+    };
   }, [showProfileMenu]);
 
   return (
@@ -75,6 +85,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           <div className="absolute right-2.5 flex items-center gap-1.5">
             {searchQuery && (
               <button
+                type="button"
                 onClick={() => setSearchQuery('')}
                 className="p-1 rounded-lg text-muted hover:text-accent transition-colors"
                 aria-label="Clear search"
@@ -92,8 +103,9 @@ export const TopBar: React.FC<TopBarProps> = ({
       {/* Right: Account Auth / Signed-in Menu */}
       <div className="flex items-center gap-2 shrink-0">
         {currentUser ? (
-          <div className="relative">
+          <div ref={profileMenuRef} className="relative">
             <button
+              type="button"
               onClick={() => setShowProfileMenu((open) => !open)}
               className="flex items-center gap-2.5 p-1 pl-1.5 pr-2.5 rounded-xl bg-elevated border border-line hover:border-accent/50 transition-all outline-none focus-visible:ring-2 focus-visible:ring-accent"
               id="user-profile-btn"
@@ -116,6 +128,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                   <p className="text-xs text-muted truncate">{currentUser.email}</p>
                 </div>
                 <button
+                  type="button"
                   onClick={() => {
                     setShowProfileMenu(false);
                     onOpenActivity();
@@ -126,6 +139,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                   Achievements &amp; Activity
                 </button>
                 <button
+                  type="button"
                   onClick={() => {
                     setShowProfileMenu(false);
                     onLogOut();
@@ -141,6 +155,7 @@ export const TopBar: React.FC<TopBarProps> = ({
         ) : (
           <div className="flex items-center gap-2">
             <Button
+              type="button"
               variant="ghost"
               size="sm"
               onClick={() => onOpenAuth('login')}
@@ -149,6 +164,7 @@ export const TopBar: React.FC<TopBarProps> = ({
               Log in
             </Button>
             <Button
+              type="button"
               variant="primary"
               size="sm"
               onClick={() => onOpenAuth('signup')}

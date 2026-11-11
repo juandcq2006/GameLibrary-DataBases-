@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
   CheckIcon,
   ClockIcon,
@@ -10,6 +10,7 @@ import {
 import type { Game, UserGame, UserTrackingStatus } from '../../shared/domain/game';
 import { STATUSES } from '../../shared/domain/status';
 import { Button } from '../../shared/ui/Button';
+import { ModalDialog } from '../../shared/ui/ModalDialog';
 
 interface TrackingModalProps {
   game: Game;
@@ -35,7 +36,6 @@ export const TrackingModal: React.FC<TrackingModalProps> = ({
   userGame,
   onSave,
 }) => {
-  const ref = useRef<HTMLDialogElement>(null);
   const isTracked = Boolean(userGame?.status);
   const [status, setStatus] = useState<UserTrackingStatus>(userGame?.status ?? 'CURRENT');
   // null = not rated; the community average is only where the slider starts
@@ -51,12 +51,6 @@ export const TrackingModal: React.FC<TrackingModalProps> = ({
 
   const clampAchievements = (n: number) =>
     Math.round(Math.min(Math.max(0, game.achievementsTotal), Math.max(0, Number.isFinite(n) ? n : 0)));
-
-  useEffect(() => {
-    const dialog = ref.current;
-    dialog?.showModal();
-    return () => dialog?.close();
-  }, []);
 
   // Closing mid-save would hide a failure, so every close path is blocked until the save settles.
   const close = () => !isSaving && onClose();
@@ -75,14 +69,11 @@ export const TrackingModal: React.FC<TrackingModalProps> = ({
   };
 
   return (
-    <dialog
-      ref={ref}
-      aria-labelledby="tracking-title"
-      onCancel={(e) => isSaving && e.preventDefault()}
+    <ModalDialog
+      labelledBy="tracking-title"
       onClose={onClose}
-      // Click on the backdrop (the dialog element itself, outside the inner panel) closes
-      onClick={(e) => e.target === e.currentTarget && close()}
-      className="w-[calc(100%-2rem)] max-w-lg p-0 bg-surface text-ink border border-line rounded-2xl shadow-2xl backdrop:bg-black/80 backdrop:backdrop-blur-sm"
+      preventClose={isSaving}
+      className="w-[calc(100%-2rem)] max-w-lg"
     >
       <div className="p-6 space-y-6">
         {/* Header */}
@@ -279,6 +270,7 @@ export const TrackingModal: React.FC<TrackingModalProps> = ({
         <div className="flex items-center justify-between pt-2">
           {isTracked ? (
             <button
+              type="button"
               onClick={() => save({ status: null, score: null, notes: null })}
               disabled={isSaving}
               className="text-sm text-rose-400 hover:text-rose-300 flex items-center gap-1.5 p-2 -ml-2"
@@ -290,10 +282,11 @@ export const TrackingModal: React.FC<TrackingModalProps> = ({
           )}
 
           <div className="flex items-center gap-2.5">
-            <Button variant="ghost" size="md" onClick={close} disabled={isSaving}>
+            <Button type="button" variant="ghost" size="md" onClick={close} disabled={isSaving}>
               Cancel
             </Button>
             <Button
+              type="button"
               variant="primary"
               size="md"
               onClick={() => {
@@ -315,6 +308,6 @@ export const TrackingModal: React.FC<TrackingModalProps> = ({
           </div>
         </div>
       </div>
-    </dialog>
+    </ModalDialog>
   );
 };

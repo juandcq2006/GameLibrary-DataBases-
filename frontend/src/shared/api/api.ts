@@ -72,7 +72,14 @@ function readMockState(): MockState {
       const raw = localStorage.getItem(DEMO_STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as Partial<MockState>;
-        if (parsed && typeof parsed === 'object' && parsed.libraries && parsed.reviews && parsed.users) {
+        if (
+          parsed &&
+          typeof parsed === 'object' &&
+          parsed.libraries &&
+          parsed.reviews &&
+          Array.isArray(parsed.users) &&
+          parsed.users.length > 0
+        ) {
           cachedMockState = {
             currentUserId: parsed.currentUserId ?? null,
             nextUserId: parsed.nextUserId ?? 10,
@@ -281,7 +288,8 @@ function mockSignUp(input: SignUpInput): AuthUser {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw new Error('email must look like name@example.com');
   }
-  if (input.password.length < 8 || input.password.length > 72) {
+  const passwordBytes = new TextEncoder().encode(input.password).length;
+  if (passwordBytes < 8 || passwordBytes > 72) {
     throw new Error('password must be between 8 and 72 bytes');
   }
 

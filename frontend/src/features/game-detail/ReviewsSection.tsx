@@ -110,10 +110,10 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <p className="text-sm text-muted">Log in or create an account to write a review for {game.title}.</p>
             <div className="flex items-center gap-2 shrink-0">
-              <Button variant="secondary" size="sm" onClick={() => onOpenAuth('login')}>
+              <Button type="button" variant="secondary" size="sm" onClick={() => onOpenAuth('login')}>
                 Log in
               </Button>
-              <Button variant="primary" size="sm" onClick={() => onOpenAuth('signup')}>
+              <Button type="button" variant="primary" size="sm" onClick={() => onOpenAuth('signup')}>
                 Sign up
               </Button>
             </div>

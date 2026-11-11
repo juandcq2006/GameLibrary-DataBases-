@@ -4,6 +4,7 @@ import {
   ClockIcon,
   StarIcon,
   TrashIcon,
+  TrophyIcon,
   XIcon,
 } from '@phosphor-icons/react';
 import type { Game, UserGame, UserTrackingStatus } from '../../shared/domain/game';
@@ -40,9 +41,16 @@ export const TrackingModal: React.FC<TrackingModalProps> = ({
   // null = not rated; the community average is only where the slider starts
   const [score, setScore] = useState<number | null>(userGame?.score ?? null);
   const [hours, setHours] = useState<number>(userGame?.hoursPlayed ?? 0);
+  const [achievements, setAchievements] = useState<number>(
+    Math.min(game.achievementsTotal, userGame?.achievementsUnlocked ?? 0)
+  );
+  const [markPlayedNow, setMarkPlayedNow] = useState<boolean>(false);
   const [notes, setNotes] = useState<string>(userGame?.notes ?? '');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const clampAchievements = (n: number) =>
+    Math.round(Math.min(Math.max(0, game.achievementsTotal), Math.max(0, Number.isFinite(n) ? n : 0)));
 
   useEffect(() => {
     const dialog = ref.current;
@@ -191,6 +199,62 @@ export const TrackingModal: React.FC<TrackingModalProps> = ({
           </div>
         </div>
 
+        {/* Achievements & Activity Timestamp */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+          <div className="p-3.5 rounded-2xl bg-canvas border border-line">
+            <div className="flex items-center justify-between text-xs mb-2">
+              <label
+                htmlFor="track-achievements"
+                className="text-sm font-semibold text-ink flex items-center gap-1.5"
+              >
+                <TrophyIcon className="w-3.5 h-3.5" /> Achievements
+              </label>
+              <span className="font-mono text-muted">/ {game.achievementsTotal}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setAchievements((a) => clampAchievements(a - 1))}
+                aria-label="Remove one achievement"
+                className={stepper}
+              >
+                −
+              </button>
+              <input
+                id="track-achievements"
+                type="number"
+                min="0"
+                max={game.achievementsTotal}
+                step="1"
+                value={achievements}
+                onChange={(e) => setAchievements(clampAchievements(Number(e.target.value)))}
+                className="min-w-0 flex-1 text-center bg-surface text-ink font-mono font-bold text-sm py-1.5 rounded-lg border border-line outline-none focus:ring-1 focus:ring-accent"
+              />
+              <button
+                type="button"
+                onClick={() => setAchievements((a) => clampAchievements(a + 1))}
+                aria-label="Add one achievement"
+                className={stepper}
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          <label className="p-3.5 rounded-2xl bg-canvas border border-line flex items-center gap-3 cursor-pointer hover:border-accent/50 transition-colors">
+            <input
+              type="checkbox"
+              checked={markPlayedNow}
+              onChange={(e) => setMarkPlayedNow(e.target.checked)}
+              className="w-4 h-4 accent-accent rounded cursor-pointer"
+            />
+            <div>
+              <span className="text-sm font-semibold text-ink block">Played today</span>
+              <span className="text-xs text-muted">Updates your activity history</span>
+            </div>
+          </label>
+        </div>
+
         <div>
           <label htmlFor="track-notes" className={sectionLabel}>
             Notes
@@ -232,7 +296,17 @@ export const TrackingModal: React.FC<TrackingModalProps> = ({
             <Button
               variant="primary"
               size="md"
-              onClick={() => save({ status, score, hoursPlayed: hours, notes: notes.trim() || null })}
+              onClick={() => {
+                const hoursIncreased = hours > (userGame?.hoursPlayed ?? 0);
+                save({
+                  status,
+                  score,
+                  hoursPlayed: hours,
+                  achievementsUnlocked: achievements,
+                  notes: notes.trim() || null,
+                  ...(markPlayedNow || hoursIncreased ? { lastPlayedAt: new Date().toISOString() } : {}),
+                });
+              }}
               disabled={isSaving}
               leftIcon={<CheckIcon className="w-4 h-4" />}
             >

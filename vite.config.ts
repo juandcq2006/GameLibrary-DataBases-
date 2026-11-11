@@ -4,6 +4,7 @@ import { defineConfig } from 'vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  base: process.env.VITE_BASE_PATH ?? '/',
   // The app lives in frontend/; configs and node_modules stay at the repo root
   root: 'frontend',
   build: { outDir: '../dist', emptyOutDir: true },

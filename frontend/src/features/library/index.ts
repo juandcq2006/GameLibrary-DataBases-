@@ -3,6 +3,7 @@ export { Sidebar } from './Sidebar';
 export { FilterBar } from './FilterBar';
 export { GameGrid } from './GameGrid';
 export { GameListView } from './GameListView';
+export { Pagination } from './Pagination';
 export { COLLECTION } from './collections';
 export {
   DEFAULT_FILTERS,
@@ -13,5 +14,6 @@ export {
   countCollections,
   countStatuses,
   genreOptions,
+  paginate,
   type FilterBarState,
 } from './filters';

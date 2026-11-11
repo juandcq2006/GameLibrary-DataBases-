@@ -5,6 +5,7 @@ import {
   GameControllerIcon,
   HeartIcon,
   StackIcon,
+  TrophyIcon,
 } from '@phosphor-icons/react';
 import type { FilterCategory, UserTrackingStatus } from '../../shared/domain/game';
 import { STATUSES } from '../../shared/domain/status';
@@ -26,6 +27,9 @@ interface SidebarProps {
   activeTrackingFilter?: UserTrackingStatus | null;
   onSelectTrackingFilter?: (status: UserTrackingStatus | null) => void;
   trackingStatusCounts?: Record<UserTrackingStatus, number>;
+  /** Whether the sidebar is showing the library or the Activity & Achievements view */
+  activeView?: 'library' | 'activity';
+  onSelectActivity?: () => void;
 }
 
 /**
@@ -45,6 +49,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeTrackingFilter,
   onSelectTrackingFilter,
   trackingStatusCounts,
+  activeView = 'library',
+  onSelectActivity,
 }) => {
   const [isExtended, setIsExtended] = useState(false);
   const [isSectionOpen, setIsSectionOpen] = useState(true);
@@ -65,7 +71,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const handleCollectionClick = (genreId: string) => {
-    if (selectedGenre === genreId) {
+    if (activeView === 'library' && selectedGenre === genreId) {
       onSelectGenre(null);
     } else {
       onSelectGenre(genreId);
@@ -85,13 +91,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               onClick={() => handleCategoryClick('all')}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm transition-colors ${
-                currentCategory === 'all' && selectedGenre === null
+                activeView === 'library' && currentCategory === 'all' && selectedGenre === null
                   ? 'bg-elevated text-accent font-semibold'
                   : 'text-muted hover:text-ink hover:bg-elevated/70'
               }`}
             >
               <div className="flex items-center gap-3">
-                <StackIcon weight={currentCategory === 'all' && selectedGenre === null ? 'fill' : 'regular'} className="w-4 h-4" />
+                <StackIcon weight={activeView === 'library' && currentCategory === 'all' && selectedGenre === null ? 'fill' : 'regular'} className="w-4 h-4" />
                 <span>All Games</span>
               </div>
               <span className="text-xs font-mono text-muted">
@@ -108,15 +114,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onSelectTrackingFilter?.(null);
                   }}
                   className={`flex-1 flex items-center justify-between px-3 py-2.5 rounded-xl text-sm transition-colors ${
-                    currentCategory === 'my-games' && selectedGenre === null && !activeTrackingFilter
+                    activeView === 'library' && currentCategory === 'my-games' && selectedGenre === null && !activeTrackingFilter
                       ? 'bg-elevated text-accent font-semibold'
-                      : currentCategory === 'my-games' && selectedGenre === null
+                      : activeView === 'library' && currentCategory === 'my-games' && selectedGenre === null
                       ? 'text-accent bg-elevated/40 font-semibold'
                       : 'text-muted hover:text-ink hover:bg-elevated/70'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <GameControllerIcon weight={currentCategory === 'my-games' && selectedGenre === null ? 'fill' : 'regular'} className="w-4 h-4" />
+                    <GameControllerIcon weight={activeView === 'library' && currentCategory === 'my-games' && selectedGenre === null ? 'fill' : 'regular'} className="w-4 h-4" />
                     <span>My Games</span>
                   </div>
                   <span className="text-xs font-mono text-muted">
@@ -146,6 +152,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <div className="mt-1 ml-4 pl-3 border-l-2 border-line space-y-0.5 py-0.5">
                   {STATUSES.map((st) => {
                     const isSubActive =
+                      activeView === 'library' &&
                       currentCategory === 'my-games' &&
                       selectedGenre === null &&
                       activeTrackingFilter === st.id;
@@ -188,19 +195,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               onClick={() => handleCategoryClick('favorites')}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm transition-colors ${
-                currentCategory === 'favorites' && selectedGenre === null
+                activeView === 'library' && currentCategory === 'favorites' && selectedGenre === null
                   ? 'bg-elevated text-accent font-semibold'
                   : 'text-muted hover:text-ink hover:bg-elevated/70'
               }`}
             >
               <div className="flex items-center gap-3">
-                <HeartIcon weight={currentCategory === 'favorites' && selectedGenre === null ? 'fill' : 'regular'} className="w-4 h-4 text-rose-400" />
+                <HeartIcon weight={activeView === 'library' && currentCategory === 'favorites' && selectedGenre === null ? 'fill' : 'regular'} className="w-4 h-4 text-rose-400" />
                 <span>Favorites</span>
               </div>
               <span className="text-xs font-mono text-muted">
                 {favoritesCount}
               </span>
             </button>
+
+            {onSelectActivity && (
+              <button
+                onClick={onSelectActivity}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${
+                  activeView === 'activity'
+                    ? 'bg-elevated text-accent font-semibold'
+                    : 'text-muted hover:text-ink hover:bg-elevated/70'
+                }`}
+              >
+                <TrophyIcon weight={activeView === 'activity' ? 'fill' : 'regular'} className="w-4 h-4 text-yellow-400" />
+                <span>Activity &amp; Trophies</span>
+              </button>
+            )}
           </nav>
         </div>
 
@@ -225,7 +246,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <nav className="space-y-1">
               {visibleCollections.map((col) => {
                 const Icon = col.icon;
-                const isActive = selectedGenre === col.id;
+                const isActive = activeView === 'library' && selectedGenre === col.id;
                 const count = genreCounts?.[col.id];
                 return (
                   <button

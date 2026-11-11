@@ -127,3 +127,20 @@ export function countStatuses(games: Game[], library: Library): Record<UserTrack
 
 /** Distinct genres across the catalog, sorted, for the genre dropdown. */
 export const genreOptions = (games: Game[]) => [...new Set(games.flatMap((g) => g.genres))].sort();
+
+/** Slices a list for a 1-based page number, clamping out-of-range page numbers cleanly. */
+export function paginate<T>(items: T[], page: number, pageSize: number): {
+  items: T[];
+  page: number;
+  totalPages: number;
+} {
+  const safeSize = Math.max(1, pageSize);
+  const totalPages = Math.max(1, Math.ceil(items.length / safeSize));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const start = (safePage - 1) * safeSize;
+  return {
+    items: items.slice(start, start + safeSize),
+    page: safePage,
+    totalPages,
+  };
+}

@@ -206,7 +206,7 @@ export const MediaHero: React.FC<MediaHeroProps> = ({
               <p className="text-sm text-muted leading-relaxed whitespace-pre-line">{game.summary}</p>
 
               <div className="pt-3 border-t border-line/60 flex flex-wrap gap-2">
-                {game.genres.map((g) => (
+                {[...game.genres, ...(game.tags ?? [])].map((g) => (
                   <span
                     key={g}
                     className="px-3 py-1 rounded-xl bg-canvas text-xs font-semibold text-muted border border-line"

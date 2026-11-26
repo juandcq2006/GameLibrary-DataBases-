@@ -33,3 +33,18 @@ export const pool: Pool = createPool({
   dateStrings: true,
   charset: 'utf8mb4',
 });
+
+/**
+ * MySQL 8's default sql_mode plus STRICT_ALL_TABLES, set on every new connection before it is
+ * used. The CSE 335 server's global sql_mode is empty, so without this MySQL silently truncates
+ * or zeroes bad values instead of rejecting them. Same value as SQL_MODE in database/connection.ts.
+ */
+export const SQL_MODE =
+  'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,STRICT_ALL_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';
+
+// 'connection' fires once per new physical connection; the SET is queued ahead of its first query.
+pool.pool.on('connection', (connection) => {
+  connection.query(`SET SESSION sql_mode = '${SQL_MODE}'`, (error: Error | null) => {
+    if (error) console.error('Could not set strict sql_mode:', error.message);
+  });
+});

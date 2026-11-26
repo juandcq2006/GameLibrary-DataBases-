@@ -135,7 +135,7 @@ function mockGetGames(query: GameQuery = {}): Game[] {
   }
   if (query.genre) {
     const target = query.genre.toLowerCase();
-    list = list.filter((g) => g.genres.some((ge) => ge.toLowerCase() === target));
+    list = list.filter((g) => [...g.genres, ...(g.tags ?? [])].some((ge) => ge.toLowerCase() === target));
   }
   if (query.format) list = list.filter((g) => g.format === query.format);
   if (query.releaseYear !== undefined) list = list.filter((g) => g.releaseYear === query.releaseYear);

@@ -18,6 +18,7 @@ const gameRow = (overrides: Partial<GameRow> = {}): GameRow => ({
   achievements_total: 30,
   summary: 'Summary',
   genres: 'Action,RPG',
+  tags: 'Open World,Souls-like',
   average_score: 87,
   popularity: 3,
   ...overrides,
@@ -58,6 +59,7 @@ test('toGame maps snake_case to camelCase and splits genres', () => {
     coverUrl: 'cover',
     storageGb: 12.5,
     genres: ['Action', 'RPG'],
+    tags: ['Open World', 'Souls-like'],
     averageScore: 87,
     popularity: 3,
     format: 'PC',
@@ -68,6 +70,7 @@ test('toGame maps snake_case to camelCase and splits genres', () => {
 
 test('toGame returns an empty genres array when the game has none', () => {
   assert.deepEqual(toGame(gameRow({ genres: null })).genres, []);
+  assert.deepEqual(toGame(gameRow({ tags: null })).tags, []);
 });
 
 test('toUserGame converts 0/1 flags to booleans and keeps nulls', () => {

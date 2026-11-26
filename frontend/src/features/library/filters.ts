@@ -9,7 +9,7 @@ import type {
   UserGame,
   UserTrackingStatus,
 } from '../../shared/domain/game';
-import { COLLECTION, COLLECTIONS, hasGenre } from './collections.ts';
+import { COLLECTION, COLLECTIONS, hasGenre, labelsOf } from './collections.ts';
 import { STATUSES } from '../../shared/domain/status.ts';
 
 /** Sort options. Order = dropdown order. `field`/`dir` also drive the list view's column headers. */
@@ -125,8 +125,8 @@ export function countStatuses(games: Game[], library: Library): Record<UserTrack
   return counts;
 }
 
-/** Distinct genres across the catalog, sorted, for the genre dropdown. */
-export const genreOptions = (games: Game[]) => [...new Set(games.flatMap((g) => g.genres))].sort();
+/** Distinct genres and tags across the catalog, sorted, for the genre dropdown. */
+export const genreOptions = (games: Game[]) => [...new Set(games.flatMap(labelsOf))].sort();
 
 /** Slices a list for a 1-based page number, clamping out-of-range page numbers cleanly. */
 export function paginate<T>(items: T[], page: number, pageSize: number): {

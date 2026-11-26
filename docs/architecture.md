@@ -85,7 +85,7 @@ flowchart TB
 
 ## 3. Data model
 
-Migrations `001_init.sql` and `002_normalization.sql`. Normalization notes: [database/README.md](../database/README.md#data-model-and-normalization).
+Migrations `001_init.sql`, `002_normalization.sql` and `003_integrity_activity_tags.sql`. The full ER diagram with every attribute, the functional dependencies and normal forms, and every constraint and trigger are in [database-report.md](database-report.md).
 
 ```mermaid
 erDiagram
@@ -95,72 +95,17 @@ erDiagram
   COMPANIES ||--o{ GAMES : "develops / publishes"
   GAMES ||--o{ GAME_GENRES : has
   GENRES ||--o{ GAME_GENRES : groups
+  GAMES ||--o{ GAME_TAGS : has
+  TAGS ||--o{ GAME_TAGS : labels
   GAMES ||--o{ GAME_PLATFORMS : "ships on"
   PLATFORMS ||--o{ GAME_PLATFORMS : hosts
-
-  USERS {
-    int id PK "AUTO_INCREMENT"
-    varchar username UK
-    varchar email UK "NULL until sign-up; CHECK looks like an address"
-    varchar password_hash "bcrypt/argon2 hash, never plain text"
-    datetime created_at
-  }
-  COMPANIES {
-    int id PK "AUTO_INCREMENT"
-    varchar name UK
-  }
-  GAMES {
-    varchar id PK "slug, e.g. elden-ring (same as RAWG)"
-    varchar title
-    int developer_id FK "companies.id, RESTRICT"
-    int publisher_id FK "companies.id, RESTRICT"
-    smallint release_year "indexed"
-    enum format "PC, PS5, Xbox, Switch, Steam Deck; indexed"
-    varchar cover_url
-    varchar banner_url
-    decimal storage_gb
-    smallint achievements_total
-    text summary
-  }
-  GENRES {
-    int id PK "AUTO_INCREMENT"
-    varchar name UK
-  }
-  GAME_GENRES {
-    varchar game_id PK,FK
-    int genre_id PK,FK
-  }
-  PLATFORMS {
-    int id PK "AUTO_INCREMENT"
-    varchar name UK
-  }
-  GAME_PLATFORMS {
-    varchar game_id PK,FK
-    int platform_id PK,FK
-  }
-  USER_GAMES {
-    int user_id PK,FK
-    varchar game_id PK,FK
-    enum status "CURRENT, PLANNING, COMPLETED, PAUSED, DROPPED"
-    tinyint score "CHECK <= 100"
-    decimal hours_played "single source of truth (fixes H2)"
-    boolean is_favorite
-    boolean is_installed
-    smallint achievements_unlocked
-    text notes
-    datetime last_played_at "UTC; NULL = never played"
-    datetime updated_at "ON UPDATE CURRENT_TIMESTAMP"
-  }
-  REVIEWS {
-    int user_id PK,FK "(user_id, game_id) → user_games, CASCADE"
-    varchar game_id PK,FK
-    text body "CHECK 1..5000 chars after trim"
-    datetime created_at
-    datetime updated_at
-  }
+  GAMES ||--o{ ACHIEVEMENTS : has
+  USERS ||--o{ USER_ACHIEVEMENTS : unlocks
+  ACHIEVEMENTS ||--o{ USER_ACHIEVEMENTS : "unlocked by"
+  USERS ||--o{ ACTIVITY : "history of"
 ```
 
-`average_score`, `popularity` and `review_count` are not stored. The `game_stats` view computes them from `user_games` and `reviews`. The `game_catalog` view joins `games` to company names, and `GET /api/games` reads it.
+`average_score`, `popularity` and `review_count` are not stored: the `game_stats` view computes them from `user_games` and `reviews`. The `game_catalog` view joins `games` to company names, and `GET /api/games` reads it. `activity` is written only by triggers, never by the API.
 
 ## 4. Example flow: saving a tracking entry
 

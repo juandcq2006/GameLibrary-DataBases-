@@ -6,6 +6,29 @@ Written by Amit (Database Architect) for the team: Andres, Mauricio and Juan.
 
 ---
 
+## Update: migration 003 (database improvements)
+
+This covers Amit's items from Andres's improvement list:
+
+| # | Item | What changed |
+|---|------|--------------|
+| 1 | Strict SQL mode | The API (`backend/db.ts`) and every `npm run db:*` command now set strict `sql_mode` on each connection. The class server's default is empty, which silently truncated bad values; now they're rejected. `db:status` shows `SQL mode: strict`. |
+| 2 | `npm run db:backup` | Writes all of G1 to `database/backups/` (git-ignored). `db:migrate` now takes a backup automatically before it changes anything. `npm run db:restore -- <file> --yes` puts one back. |
+| 3 | Migration checksums | `schema_migrations` stores each migration's sha256. If anyone edits an applied migration, `db:migrate` refuses to run and `db:status` shows `[!]`. |
+| 4 | CHECK constraints + achievements trigger | Slugs, years, URLs, usernames (same rule as sign-up), bcrypt-only password hashes, and note length are now checked. A trigger keeps `achievements_unlocked` ≤ the game's total (error 3819, which the API returns as a 400). |
+| 5 | Achievements + activity | New tables `achievements`, `user_achievements` and `activity`. Triggers write the activity history on every library change and review. |
+| 6 | Tags split from genres | `genres` now holds only RAWG's 19 genres; "Open World", "Souls-like", "Action RPG" … are rows of `tags`/`game_tags`. `GET /api/games` returns a new `tags` list, and `?genre=` matches a genre or a tag. |
+| 7 | Real games from RAWG | Done: `seeds/002_rawg_games.sql` adds 150 real games (165 in all) with their tags and 2,884 achievements. The 15 demo games keep their data. |
+| 8 | Report | Final ER diagram and normalization write-up in [docs/database-report.md](../docs/database-report.md). |
+
+**For Mauricio:** the achievements and activity endpoints can be built on the new tables. See "For the API" in [README.md](README.md#for-the-api-mauricio). Never write to `activity` from the API: the triggers already do.
+
+**For Juan:** the sidebar collections and the genre dropdown now look at `genres` and `tags` together (`labelsOf` in `features/library/collections.ts`), so they work the same as before.
+
+**For Andres:** `npm test` reads `backend/.env`. If yours points at G1, the API tests (sign-up, library updates, reviews) run against the **shared** database. Point the tests at a local MySQL, as in section 5.
+
+---
+
 ## 1. Everyone: connect to the shared database (about 5 minutes)
 
 Dr. Mohamed asked each of us to confirm three things: that we can open our group database, that we all reach the same one, and that its name matches the group name. These steps check all three.
@@ -33,21 +56,9 @@ Dr. Mohamed asked each of us to confirm three things: that we can open our group
    npm run db:status
    ```
 
-   You should see `Database: G1`, both migrations checked (`[x]`), and these row counts:
+   You should see `Database: G1`, `SQL mode: strict`, every migration checked (`[x]`), and the same row counts as everyone else in the group. If you do, your access works, so tell the group chat.
 
-   | Table | Rows |
-   |-------|------|
-   | games | 15 |
-   | companies | 20 |
-   | genres / game_genres | 32 / 62 |
-   | platforms / game_platforms | 5 / 15 |
-   | users | 4 |
-   | user_games | 24 |
-   | reviews | 7 |
-
-   If you see those, your access works, so tell the group chat. If someone adds data later, the counts go up, and everyone still sees the same numbers.
-
-4. **Do not run `npm run db:migrate`.** The schema is already applied. Running it again would do nothing harmful, because it skips applied migrations, but schema changes go through Amit (see section 4).
+4. **Do not run `npm run db:migrate`.** Schema changes go through Amit (see section 4). If you did run it, it would do nothing, because it skips applied migrations.
 
 ### If `db:status` fails
 
@@ -83,13 +94,13 @@ Dr. Mohamed asked each of us to confirm three things: that we can open our group
 
 ### Amit (Database Architect)
 - Done: schema, normalization, migrations, seeds, the migration tool, example queries and tests, plus the setup of `G1`.
-- Still to do: load real games from RAWG when its API is back up (section 3), and review any schema change anyone needs.
+- Done since: real games from RAWG (section 3), migration 003. Still to do: review any schema change anyone needs.
 
 ---
 
-## 3. Real game data from RAWG (Amit, when RAWG is back up)
+## 3. Real game data from RAWG (done; how to refresh it)
 
-Right now `G1` has 15 demo games. To load real ones:
+`seeds/002_rawg_games.sql` already holds 150 real games. To regenerate it (for example with more games):
 
 1. Get a free key at <https://rawg.io/apidocs> and put it in your own `backend/.env` as `RAWG_API_KEY=...`.
 2. Run:

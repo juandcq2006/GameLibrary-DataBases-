@@ -25,6 +25,7 @@ export interface GameRow {
   achievements_total: number;
   summary: string;
   genres: string | null;
+  tags: string | null;
   average_score: number;
   popularity: number;
 }
@@ -63,6 +64,7 @@ export function toGame(row: GameRow): Game {
     coverUrl: row.cover_url,
     storageGb: Number(row.storage_gb),
     genres: row.genres === null ? [] : row.genres.split(','),
+    tags: row.tags === null ? [] : row.tags.split(','),
     averageScore: Number(row.average_score),
     popularity: Number(row.popularity),
     format: row.format,

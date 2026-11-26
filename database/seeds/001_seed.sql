@@ -1,13 +1,23 @@
 -- 001_seed: demo data generated from frontend/src/shared/api/mocks (ADR-0001 action 4b).
--- Apply after migrations 001 and 002. Idempotent: re-running updates the same rows.
+-- Apply after migrations 001, 002 and 003. Idempotent: re-running updates the same rows.
 --   mysql -u root geekbond < database/seeds/001_seed.sql
 
 INSERT INTO users (id, username) VALUES (1, 'demo') AS new
   ON DUPLICATE KEY UPDATE username = new.username;
 
+-- Genres are RAWG's genre list (migration 003 enforces it); finer labels are tags.
 INSERT INTO genres (name) VALUES
-  ('4X'),
   ('Action'),
+  ('Indie'),
+  ('Platformer'),
+  ('Racing'),
+  ('RPG'),
+  ('Shooter'),
+  ('Strategy') AS new
+  ON DUPLICATE KEY UPDATE name = new.name;
+
+INSERT INTO tags (name) VALUES
+  ('4X'),
   ('Action RPG'),
   ('Co-op'),
   ('Cyberpunk'),
@@ -15,26 +25,20 @@ INSERT INTO genres (name) VALUES
   ('Dark Fantasy'),
   ('Driving'),
   ('Exploration'),
-  ('FPS'),
   ('Fast-Paced'),
+  ('FPS'),
   ('Gore'),
   ('Historical'),
   ('Horror'),
-  ('Indie'),
   ('Metroidvania'),
   ('Mythology'),
   ('Open World'),
   ('Pixel Graphics'),
-  ('Platformer'),
-  ('RPG'),
-  ('Racing'),
   ('Roguelike'),
   ('Sci-Fi'),
-  ('Shooter'),
   ('Souls-like'),
   ('Space'),
   ('Story Rich'),
-  ('Strategy'),
   ('Survival Horror'),
   ('Turn-Based'),
   ('Western') AS new
@@ -92,69 +96,78 @@ INSERT IGNORE INTO game_genres (game_id, genre_id)
 SELECT v.game_id, ge.id
   FROM (
     SELECT 'cyberpunk-2077' AS game_id, 'RPG' AS genre
-    UNION ALL SELECT 'cyberpunk-2077' AS game_id, 'Open World' AS genre
-    UNION ALL SELECT 'cyberpunk-2077' AS game_id, 'Cyberpunk' AS genre
     UNION ALL SELECT 'cyberpunk-2077' AS game_id, 'Action' AS genre
-    UNION ALL SELECT 'elden-ring' AS game_id, 'Action RPG' AS genre
-    UNION ALL SELECT 'elden-ring' AS game_id, 'Souls-like' AS genre
-    UNION ALL SELECT 'elden-ring' AS game_id, 'Dark Fantasy' AS genre
-    UNION ALL SELECT 'elden-ring' AS game_id, 'Open World' AS genre
+    UNION ALL SELECT 'elden-ring' AS game_id, 'Action' AS genre
+    UNION ALL SELECT 'elden-ring' AS game_id, 'RPG' AS genre
     UNION ALL SELECT 'baldurs-gate-3' AS game_id, 'RPG' AS genre
-    UNION ALL SELECT 'baldurs-gate-3' AS game_id, 'Turn-Based' AS genre
-    UNION ALL SELECT 'baldurs-gate-3' AS game_id, 'Story Rich' AS genre
-    UNION ALL SELECT 'baldurs-gate-3' AS game_id, 'D&D' AS genre
-    UNION ALL SELECT 'hades-2' AS game_id, 'Roguelike' AS genre
     UNION ALL SELECT 'hades-2' AS game_id, 'Action' AS genre
-    UNION ALL SELECT 'hades-2' AS game_id, 'Mythology' AS genre
     UNION ALL SELECT 'hades-2' AS game_id, 'Indie' AS genre
     UNION ALL SELECT 'starfield' AS game_id, 'RPG' AS genre
-    UNION ALL SELECT 'starfield' AS game_id, 'Space' AS genre
-    UNION ALL SELECT 'starfield' AS game_id, 'Sci-Fi' AS genre
-    UNION ALL SELECT 'starfield' AS game_id, 'Exploration' AS genre
-    UNION ALL SELECT 'hollow-knight-silksong' AS game_id, 'Metroidvania' AS genre
     UNION ALL SELECT 'hollow-knight-silksong' AS game_id, 'Indie' AS genre
-    UNION ALL SELECT 'hollow-knight-silksong' AS game_id, 'Souls-like' AS genre
     UNION ALL SELECT 'hollow-knight-silksong' AS game_id, 'Platformer' AS genre
     UNION ALL SELECT 'witcher-3' AS game_id, 'RPG' AS genre
-    UNION ALL SELECT 'witcher-3' AS game_id, 'Open World' AS genre
-    UNION ALL SELECT 'witcher-3' AS game_id, 'Dark Fantasy' AS genre
-    UNION ALL SELECT 'witcher-3' AS game_id, 'Story Rich' AS genre
     UNION ALL SELECT 'doom-eternal' AS game_id, 'Action' AS genre
-    UNION ALL SELECT 'doom-eternal' AS game_id, 'FPS' AS genre
-    UNION ALL SELECT 'doom-eternal' AS game_id, 'Fast-Paced' AS genre
-    UNION ALL SELECT 'doom-eternal' AS game_id, 'Gore' AS genre
-    UNION ALL SELECT 'red-dead-redemption-2' AS game_id, 'Open World' AS genre
+    UNION ALL SELECT 'doom-eternal' AS game_id, 'Shooter' AS genre
     UNION ALL SELECT 'red-dead-redemption-2' AS game_id, 'Action' AS genre
-    UNION ALL SELECT 'red-dead-redemption-2' AS game_id, 'Western' AS genre
-    UNION ALL SELECT 'red-dead-redemption-2' AS game_id, 'Story Rich' AS genre
     UNION ALL SELECT 'stellaris' AS game_id, 'Strategy' AS genre
-    UNION ALL SELECT 'stellaris' AS game_id, 'Sci-Fi' AS genre
-    UNION ALL SELECT 'stellaris' AS game_id, 'Space' AS genre
-    UNION ALL SELECT 'stellaris' AS game_id, '4X' AS genre
     UNION ALL SELECT 'forza-horizon-5' AS game_id, 'Racing' AS genre
-    UNION ALL SELECT 'forza-horizon-5' AS game_id, 'Open World' AS genre
-    UNION ALL SELECT 'forza-horizon-5' AS game_id, 'Driving' AS genre
     UNION ALL SELECT 'forza-horizon-5' AS game_id, 'Action' AS genre
-    UNION ALL SELECT 'dead-cells' AS game_id, 'Roguelike' AS genre
     UNION ALL SELECT 'dead-cells' AS game_id, 'Action' AS genre
     UNION ALL SELECT 'dead-cells' AS game_id, 'Indie' AS genre
-    UNION ALL SELECT 'dead-cells' AS game_id, 'Pixel Graphics' AS genre
-    UNION ALL SELECT 'dead-cells' AS game_id, 'Metroidvania' AS genre
-    UNION ALL SELECT 'resident-evil-4' AS game_id, 'Horror' AS genre
-    UNION ALL SELECT 'resident-evil-4' AS game_id, 'Survival Horror' AS genre
     UNION ALL SELECT 'resident-evil-4' AS game_id, 'Action' AS genre
     UNION ALL SELECT 'resident-evil-4' AS game_id, 'Shooter' AS genre
     UNION ALL SELECT 'helldivers-2' AS game_id, 'Shooter' AS genre
-    UNION ALL SELECT 'helldivers-2' AS game_id, 'FPS' AS genre
     UNION ALL SELECT 'helldivers-2' AS game_id, 'Action' AS genre
-    UNION ALL SELECT 'helldivers-2' AS game_id, 'Sci-Fi' AS genre
-    UNION ALL SELECT 'helldivers-2' AS game_id, 'Co-op' AS genre
     UNION ALL SELECT 'civilization-7' AS game_id, 'Strategy' AS genre
-    UNION ALL SELECT 'civilization-7' AS game_id, 'Turn-Based' AS genre
-    UNION ALL SELECT 'civilization-7' AS game_id, 'Historical' AS genre
-    UNION ALL SELECT 'civilization-7' AS game_id, '4X' AS genre
   ) AS v
   JOIN genres ge ON ge.name = v.genre;
+
+INSERT IGNORE INTO game_tags (game_id, tag_id)
+SELECT v.game_id, t.id
+  FROM (
+    SELECT 'cyberpunk-2077' AS game_id, 'Open World' AS tag
+    UNION ALL SELECT 'cyberpunk-2077' AS game_id, 'Cyberpunk' AS tag
+    UNION ALL SELECT 'elden-ring' AS game_id, 'Action RPG' AS tag
+    UNION ALL SELECT 'elden-ring' AS game_id, 'Souls-like' AS tag
+    UNION ALL SELECT 'elden-ring' AS game_id, 'Dark Fantasy' AS tag
+    UNION ALL SELECT 'elden-ring' AS game_id, 'Open World' AS tag
+    UNION ALL SELECT 'baldurs-gate-3' AS game_id, 'Turn-Based' AS tag
+    UNION ALL SELECT 'baldurs-gate-3' AS game_id, 'Story Rich' AS tag
+    UNION ALL SELECT 'baldurs-gate-3' AS game_id, 'D&D' AS tag
+    UNION ALL SELECT 'hades-2' AS game_id, 'Roguelike' AS tag
+    UNION ALL SELECT 'hades-2' AS game_id, 'Mythology' AS tag
+    UNION ALL SELECT 'starfield' AS game_id, 'Space' AS tag
+    UNION ALL SELECT 'starfield' AS game_id, 'Sci-Fi' AS tag
+    UNION ALL SELECT 'starfield' AS game_id, 'Exploration' AS tag
+    UNION ALL SELECT 'hollow-knight-silksong' AS game_id, 'Metroidvania' AS tag
+    UNION ALL SELECT 'hollow-knight-silksong' AS game_id, 'Souls-like' AS tag
+    UNION ALL SELECT 'witcher-3' AS game_id, 'Open World' AS tag
+    UNION ALL SELECT 'witcher-3' AS game_id, 'Dark Fantasy' AS tag
+    UNION ALL SELECT 'witcher-3' AS game_id, 'Story Rich' AS tag
+    UNION ALL SELECT 'doom-eternal' AS game_id, 'FPS' AS tag
+    UNION ALL SELECT 'doom-eternal' AS game_id, 'Fast-Paced' AS tag
+    UNION ALL SELECT 'doom-eternal' AS game_id, 'Gore' AS tag
+    UNION ALL SELECT 'red-dead-redemption-2' AS game_id, 'Open World' AS tag
+    UNION ALL SELECT 'red-dead-redemption-2' AS game_id, 'Western' AS tag
+    UNION ALL SELECT 'red-dead-redemption-2' AS game_id, 'Story Rich' AS tag
+    UNION ALL SELECT 'stellaris' AS game_id, 'Sci-Fi' AS tag
+    UNION ALL SELECT 'stellaris' AS game_id, 'Space' AS tag
+    UNION ALL SELECT 'stellaris' AS game_id, '4X' AS tag
+    UNION ALL SELECT 'forza-horizon-5' AS game_id, 'Open World' AS tag
+    UNION ALL SELECT 'forza-horizon-5' AS game_id, 'Driving' AS tag
+    UNION ALL SELECT 'dead-cells' AS game_id, 'Roguelike' AS tag
+    UNION ALL SELECT 'dead-cells' AS game_id, 'Pixel Graphics' AS tag
+    UNION ALL SELECT 'dead-cells' AS game_id, 'Metroidvania' AS tag
+    UNION ALL SELECT 'resident-evil-4' AS game_id, 'Horror' AS tag
+    UNION ALL SELECT 'resident-evil-4' AS game_id, 'Survival Horror' AS tag
+    UNION ALL SELECT 'helldivers-2' AS game_id, 'FPS' AS tag
+    UNION ALL SELECT 'helldivers-2' AS game_id, 'Sci-Fi' AS tag
+    UNION ALL SELECT 'helldivers-2' AS game_id, 'Co-op' AS tag
+    UNION ALL SELECT 'civilization-7' AS game_id, 'Turn-Based' AS tag
+    UNION ALL SELECT 'civilization-7' AS game_id, 'Historical' AS tag
+    UNION ALL SELECT 'civilization-7' AS game_id, '4X' AS tag
+  ) AS v
+  JOIN tags t ON t.name = v.tag;
 
 INSERT INTO user_games (user_id, game_id, status, score, hours_played, is_favorite,
                         is_installed, achievements_unlocked, notes, last_played_at, updated_at)

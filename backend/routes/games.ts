@@ -25,6 +25,10 @@ const SELECT_COLUMNS = `
             FROM game_genres gg
             JOIN genres ge ON ge.id = gg.genre_id
            WHERE gg.game_id = g.id) AS genres,
+         (SELECT GROUP_CONCAT(t.name ORDER BY t.name SEPARATOR ',')
+            FROM game_tags gt
+            JOIN tags t ON t.id = gt.tag_id
+           WHERE gt.game_id = g.id) AS tags,
          COALESCE(s.average_score, 0) AS average_score,
          COALESCE(s.popularity, 0)    AS popularity
 `;
@@ -99,14 +103,19 @@ function buildFilters(req: Request): { where: string[]; values: SqlValue[] } {
     values.push(like, like, like);
   }
 
+  // Since migration 003 finer labels ("Souls-like", "Open World") are tags, so ?genre= matches either.
   const genre = readString(req.query.genre, 'genre');
   if (genre !== undefined) {
-    where.push(`EXISTS (
+    where.push(`(EXISTS (
       SELECT 1 FROM game_genres gg
         JOIN genres ge ON ge.id = gg.genre_id
        WHERE gg.game_id = g.id AND ge.name = ?
-    )`);
-    values.push(genre);
+    ) OR EXISTS (
+      SELECT 1 FROM game_tags gt
+        JOIN tags t ON t.id = gt.tag_id
+       WHERE gt.game_id = g.id AND t.name = ?
+    ))`);
+    values.push(genre, genre);
   }
 
   const format = readFormat(req.query.format);

@@ -1,7 +1,15 @@
 // database/rawg.ts: mapping RAWG's API shape onto our schema, and SQL escaping. No network, no MySQL.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isSkipped, sqlString, toSeedGame, toSeedSql, type RawgGame, type SeedGame } from '../../database/rawg.ts';
+import {
+  isSkipped,
+  sqlString,
+  toSeedAchievements,
+  toSeedGame,
+  toSeedSql,
+  type RawgGame,
+  type SeedGame,
+} from '../../database/rawg.ts';
 
 const base: RawgGame = {
   slug: 'the-game',
@@ -62,4 +70,48 @@ test('sqlString escapes quotes and backslashes, and maps null to NULL', () => {
 test('the seed never contains a raw quote that could end a string early', () => {
   const sql = toSeedSql([toSeedGame({ ...base, name: "Tom Clancy's '); DROP TABLE games; --" }) as SeedGame]);
   assert.match(sql, /'Tom Clancy''s ''\); DROP TABLE games; --'/);
+});
+
+test('only RAWG genres stay genres; other labels and English tags become tags, without duplicates', () => {
+  const game = toSeedGame({
+    ...base,
+    genres: [{ name: 'Action' }, { name: 'Souls-like' }],
+    tags: [
+      { name: 'Open World', language: 'eng' },
+      { name: 'Action', language: 'eng' }, // already a genre
+      { name: 'Открытый мир', language: 'rus' },
+      { name: 'Souls-like', language: 'eng' },
+      { name: 'Comma, Separated', language: 'eng' }, // would break the API's comma-joined list
+    ],
+  }) as SeedGame;
+  assert.deepEqual(game.genres, ['Action']);
+  assert.deepEqual(game.tags, ['Souls-like', 'Open World']);
+});
+
+test('slugs must be hyphen-separated words, as the games table requires', () => {
+  assert.ok(isSkipped(toSeedGame({ ...base, slug: 'double--hyphen' })));
+  assert.ok(isSkipped(toSeedGame({ ...base, slug: '-leading' })));
+});
+
+test('achievements are trimmed, de-duplicated by name, and keep only http(s) images', () => {
+  const list = toSeedAchievements([
+    { name: '  First Blood ', description: ' Win a fight. ', image: 'https://media.rawg.io/x.jpg' },
+    { name: 'first blood', description: 'duplicate' },
+    { name: '', description: 'no name' },
+    { name: 'Secret', description: null, image: 'javascript:alert(1)' },
+  ]);
+  assert.deepEqual(list, [
+    { name: 'First Blood', description: 'Win a fight.', imageUrl: 'https://media.rawg.io/x.jpg' },
+    { name: 'Secret', description: null, imageUrl: null },
+  ]);
+});
+
+test('the seed writes tags, game_tags and achievements, including for games outside the seed', () => {
+  const game = { ...(toSeedGame({ ...base, tags: [{ name: 'Co-op' }] }) as SeedGame) };
+  game.achievements = toSeedAchievements([{ name: "Baldur's Hero" }]);
+  const sql = toSeedSql([game], [], [{ gameId: 'elden-ring', achievements: toSeedAchievements([{ name: 'Elden Lord' }]) }]);
+  assert.ok(sql.includes("INSERT INTO tags (name) VALUES\n  ('Co-op')"));
+  assert.ok(sql.includes('INSERT IGNORE INTO game_tags (game_id, tag_id)'));
+  assert.ok(sql.includes("('the-game', 'Baldur''s Hero', NULL, NULL)"));
+  assert.ok(sql.includes("('elden-ring', 'Elden Lord', NULL, NULL)"));
 });

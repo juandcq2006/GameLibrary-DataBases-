@@ -17,9 +17,12 @@ import {
 } from '@phosphor-icons/react';
 import type { Game, UserGame } from '../../shared/domain/game';
 
-/** True when any of the game's genres contains `term` (case-insensitive). */
+/** A game's genres followed by its tags: everything the UI groups and filters by. */
+export const labelsOf = (game: Game) => [...game.genres, ...(game.tags ?? [])];
+
+/** True when any of the game's genres or tags contains `term` (case-insensitive). */
 export const hasGenre = (game: Game, term: string) =>
-  game.genres.some((genre) => genre.toLowerCase().includes(term.toLowerCase()));
+  labelsOf(game).some((label) => label.toLowerCase().includes(term.toLowerCase()));
 
 const genre = (term: string) => (game: Game) => hasGenre(game, term);
 

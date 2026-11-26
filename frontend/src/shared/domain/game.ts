@@ -7,7 +7,7 @@ export type UserTrackingStatus = 'CURRENT' | 'PLANNING' | 'COMPLETED' | 'PAUSED'
 export const GAME_FORMATS = ['PC', 'PlayStation 5', 'Xbox Series X', 'Nintendo Switch', 'Steam Deck'] as const;
 export type GameFormat = (typeof GAME_FORMATS)[number];
 
-/** Catalog row: `games` + its genres + the `game_stats` view. The same for every user. */
+/** Catalog row: `games` + its genres and tags + the `game_stats` view. The same for every user. */
 export interface Game {
   id: string;
   title: string;
@@ -17,7 +17,9 @@ export interface Game {
   bannerUrl: string;
   coverUrl: string;
   storageGb: number;
-  genres: string[];
+  genres: string[]; // RAWG's genres only, e.g. 'Action', 'RPG'
+  /** Finer labels ('Open World', 'Souls-like'). Sent by the API; the offline mocks keep them in `genres`. */
+  tags?: string[];
   averageScore: number; // 0-100, computed by game_stats
   popularity: number; // computed by game_stats
   format: GameFormat;

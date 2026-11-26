@@ -6,7 +6,7 @@ import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { toSeedGame, toSeedSql, type RawgGame, type SeedGame } from '../../database/rawg.ts';
+import { toSeedAchievements, toSeedGame, toSeedSql, type RawgGame, type SeedGame } from '../../database/rawg.ts';
 
 const databaseDir = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'database');
 const { DB_HOST = 'localhost', DB_PORT = '3306', DB_USER = 'root', DB_PASSWORD = '' } = process.env;
@@ -85,11 +85,25 @@ test('a company that still has games cannot be deleted', { skip }, () => {
 
 test('seeds apply on top of every migration and can be re-run without duplicates', { skip }, () => {
   const counts = () => sql(FRESH, `SELECT (SELECT COUNT(*) FROM games), (SELECT COUNT(*) FROM companies),
-    (SELECT COUNT(*) FROM reviews), (SELECT COUNT(*) FROM game_platforms), (SELECT COUNT(*) FROM users)`);
+    (SELECT COUNT(*) FROM reviews), (SELECT COUNT(*) FROM game_platforms), (SELECT COUNT(*) FROM users),
+    (SELECT COUNT(*) FROM game_tags), (SELECT COUNT(*) FROM achievements), (SELECT COUNT(*) FROM activity)`);
   const first = counts();
   for (const file of files('seeds')) sql(FRESH, read('seeds', file));
-  assert.equal(counts(), first);
-  assert.match(first, /^15\t20\t7\t15\t4$/);
+  assert.equal(counts(), first, 'a second run changes nothing, not even the activity history');
+
+  // The demo data, whether or not the RAWG seed (002_rawg_games.sql) has been generated yet.
+  const [games, , reviews, , users] = first.split('\t').map(Number);
+  assert.ok(games >= 15, `${games} games`);
+  assert.equal(reviews, 7);
+  assert.equal(users, 4);
+  assert.equal(sql(FRESH, 'SELECT COUNT(*) FROM games WHERE storage_gb IS NOT NULL'), '15', 'the 15 demo games');
+});
+
+test('003 backfills the activity history from existing library rows', { skip }, () => {
+  assert.equal(
+    sql(LEGACY, "SELECT GROUP_CONCAT(CONCAT(type, ':', COALESCE(new_value, '-')) ORDER BY type) FROM activity WHERE game_id = 'er'"),
+    'ADDED:COMPLETED'
+  );
 });
 
 test('reviews: one per user per game, only for games in that user\'s library, never empty', { skip }, () => {
@@ -122,7 +136,7 @@ test('every example query in database/queries.sql runs', { skip }, () => {
 test('a RAWG seed applies, reuses existing companies and genres, and links platforms', { skip }, () => {
   const raw: RawgGame[] = [
     {
-      slug: 'portal-2',
+      slug: 'sample-portal-2', // not a real RAWG slug, so it can't collide with seeds/002
       name: "Portal 2",
       released: '2011-04-18',
       background_image: 'https://media.rawg.io/media/games/portal2.jpg',
@@ -130,6 +144,11 @@ test('a RAWG seed applies, reuses existing companies and genres, and links platf
       achievements_count: 51,
       platforms: [{ platform: { name: 'PC' } }, { platform: { name: 'Xbox 360' } }, { platform: { name: 'PlayStation 3' } }],
       genres: [{ name: 'Shooter' }, { name: 'Puzzle' }],
+      tags: [
+        { name: 'Singleplayer', language: 'eng' },
+        { name: 'Co-op', language: 'eng' },
+        { name: 'Кооператив', language: 'rus' },
+      ],
       developers: [{ name: 'Valve Software' }],
       publishers: [{ name: 'Valve' }],
     },
@@ -144,22 +163,36 @@ test('a RAWG seed applies, reuses existing companies and genres, and links platf
       publishers: [],
     },
   ];
-  const seed = toSeedSql(raw.map(toSeedGame) as SeedGame[]);
+  const games = raw.map(toSeedGame) as SeedGame[];
+  games[0].achievements = toSeedAchievements([
+    { name: 'Wake Up Call', description: 'Survive the manual override.', image: 'https://media.rawg.io/a.jpg' },
+    { name: 'You Monster', description: null },
+  ]);
+  const seed = toSeedSql(games, [], [{ gameId: 'elden-ring', achievements: toSeedAchievements([{ name: 'Elden Lord' }]) }]);
   sql(FRESH, seed);
   sql(FRESH, seed); // idempotent
 
-  assert.equal(sql(FRESH, "SELECT title, developer, publisher, release_year FROM game_catalog WHERE id = 'portal-2'"), 'Portal 2\tValve Software\tValve\t2011');
+  assert.equal(sql(FRESH, "SELECT title, developer, publisher, release_year FROM game_catalog WHERE id = 'sample-portal-2'"), 'Portal 2\tValve Software\tValve\t2011');
   assert.equal(sql(FRESH, "SELECT COUNT(*) FROM companies WHERE name = 'CD PROJEKT RED'"), '1');
   assert.equal(sql(FRESH, "SELECT title FROM games WHERE id = 'cyberpunk-2077'"), 'Cyberpunk 2077');
   assert.equal(sql(FRESH, "SELECT COUNT(*) FROM user_games WHERE game_id = 'cyberpunk-2077'"), '1');
   assert.equal(
     sql(FRESH, `SELECT GROUP_CONCAT(pl.name ORDER BY pl.name) FROM game_platforms gp
-                JOIN platforms pl ON pl.id = gp.platform_id WHERE gp.game_id = 'portal-2'`),
+                JOIN platforms pl ON pl.id = gp.platform_id WHERE gp.game_id = 'sample-portal-2'`),
     'PC,PlayStation 3,Xbox 360'
   );
   assert.equal(
     sql(FRESH, `SELECT GROUP_CONCAT(ge.name ORDER BY ge.name) FROM game_genres gg
-                JOIN genres ge ON ge.id = gg.genre_id WHERE gg.game_id = 'portal-2'`),
+                JOIN genres ge ON ge.id = gg.genre_id WHERE gg.game_id = 'sample-portal-2'`),
     'Puzzle,Shooter'
   );
+  assert.equal(
+    sql(FRESH, `SELECT GROUP_CONCAT(t.name ORDER BY t.name) FROM game_tags gt
+                JOIN tags t ON t.id = gt.tag_id WHERE gt.game_id = 'sample-portal-2'`),
+    'Co-op,Singleplayer',
+    'English tags only; Co-op is reused from 001_seed'
+  );
+  assert.equal(sql(FRESH, "SELECT COUNT(*) FROM tags WHERE name = 'Co-op'"), '1');
+  assert.equal(sql(FRESH, "SELECT GROUP_CONCAT(name ORDER BY name) FROM achievements WHERE game_id = 'sample-portal-2'"), 'Wake Up Call,You Monster');
+  assert.equal(sql(FRESH, "SELECT COUNT(*) FROM achievements WHERE game_id = 'elden-ring' AND name = 'Elden Lord'"), '1');
 });

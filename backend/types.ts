@@ -21,7 +21,8 @@ export interface Game {
   bannerUrl: string;
   coverUrl: string;
   storageGb: number;
-  genres: string[];
+  genres: string[]; // RAWG's genres only (migration 003)
+  tags: string[]; // finer labels: "Open World", "Souls-like", "Story Rich" …
   averageScore: number;
   popularity: number;
   format: GameFormat;

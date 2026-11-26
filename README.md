@@ -62,7 +62,8 @@ Vite prints the local URL, usually <http://localhost:5173>.
 | `npm run api` | Starts the Express API on <http://localhost:3000> |
 | `npm run typecheck:backend` | Type-checks the backend |
 | `npm run verify` | Backend and database typecheck, lint, all tests, and production build |
-| `npm run db:status` / `db:migrate` / `db:seed` | Check, migrate, or seed the database in `backend/.env` |
+| `npm run db:status` / `db:migrate` / `db:seed` | Check, migrate (backs up first), or seed the database in `backend/.env` |
+| `npm run db:backup` / `db:restore -- <file> --yes` | Back up the database to `database/backups/`, or replace it with a backup |
 | `npm run db:import-rawg` | Downloads real games from RAWG into `database/seeds/002_rawg_games.sql` |
 
 ### Database

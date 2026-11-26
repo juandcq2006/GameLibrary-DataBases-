@@ -98,7 +98,9 @@ test('GET /api/games returns the catalog with genres and computed stats', { skip
   assert.ok(game);
   assert.equal(typeof game.title, 'string');
   assert.ok(Array.isArray(game.genres));
-  assert.ok(game.genres.includes('Souls-like'));
+  assert.ok(Array.isArray(game.tags));
+  assert.ok(game.genres.includes('RPG'));
+  assert.ok(game.tags.includes('Souls-like'), 'since migration 003 finer labels are tags');
   assert.equal(typeof game.averageScore, 'number');
   assert.equal(typeof game.popularity, 'number');
   assert.equal(typeof game.storageGb, 'number');
@@ -132,7 +134,7 @@ test('GET /api/games filters by search, genre, format, release year and score', 
 
   const genre = (await (await get('/api/games?genre=Souls-like&limit=100')).json()) as Game[];
   assert.ok(genre.some((game) => game.id === 'elden-ring'));
-  assert.ok(genre.every((game) => game.genres.includes('Souls-like')));
+  assert.ok(genre.every((game) => [...game.genres, ...game.tags].includes('Souls-like')));
 
   const format = (await (await get('/api/games?format=PC&limit=100')).json()) as Game[];
   assert.ok(format.length > 0);

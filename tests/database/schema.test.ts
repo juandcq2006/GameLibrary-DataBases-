@@ -59,8 +59,8 @@ test('every table and view the app uses exists', { skip }, () => {
   // The Windows `mysql` client ends lines with CRLF; split on either ending.
   const tables = sql('SHOW TABLES').split(/\r?\n/).sort();
   assert.deepEqual(tables, [
-    'companies', 'game_catalog', 'game_genres', 'game_platforms', 'game_stats', 'games',
-    'genres', 'platforms', 'reviews', 'user_games', 'users',
+    'achievements', 'activity', 'companies', 'game_catalog', 'game_genres', 'game_platforms', 'game_stats',
+    'game_tags', 'games', 'genres', 'platforms', 'reviews', 'tags', 'user_achievements', 'user_games', 'users',
   ]);
 });
 
